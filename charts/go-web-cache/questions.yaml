@@ -1,0 +1,67 @@
+questions:
+  - variable: settings.backend.host
+    default: "web"
+    description: "The host of the backend service (e.g. web or web.default.svc.cluster.local)"
+    label: "Backend Host"
+    type: string
+    group: "Backend settings"
+  - variable: settings.backend.port
+    default: 8080
+    description: "The port of the backend service (e.g. 8080)"
+    label: "Backend Port"
+    type: int
+    group: "Backend settings"
+  - variable: settings.backend.healthCheck.enabled
+    default: true
+    description: "Enable health checks"
+    label: "Health Check Enabled"
+    type: bool
+    group: "Backend settings"
+  - variable: settings.backend.healthCheck.path
+    default: "/healthz"
+    description: "The path to use for health checks (e.g. /healthz) NOTE: This should return a 200 status code if the service is healthy"
+    label: "Health Check Path"
+    type: string
+    group: "Backend settings"
+  - variable: settings.backend.healthCheck.interval
+    default: "5s"
+    description: "The interval to use for health checks (e.g. 5s)"
+    label: "Health Check Interval"
+    type: string
+    group: "Backend settings"
+  - variable: settings.backend.healthCheck.timeout
+    default: "3s"
+    description: "The timeout to use for health checks (e.g. 3s)"
+    label: "Health Check Timeout"
+    type: string
+    group: "Backend settings"
+  - variable: settings.backend.healthCheck.retries
+    default: 3
+    description: "The number of retries to use for health checks (e.g. 3)"
+    label: "Health Check Retries"
+    type: int
+    group: "Backend settings"
+  - variable: settings.debug
+    default: false
+    description: "Enable debug logging"
+    label: "Debug"
+    type: bool
+    group: "Debug settings"
+  - variable: settings.configFile
+    default: "/app/config.json"
+    description: "The path to the config file"
+    label: "Config File"
+    type: string
+    group: "Debug settings"
+  - variable: settings.metrics.enabled
+    default: true
+    description: "Enable metrics server"
+    label: "Metrics Enabled"
+    type: bool
+    group: "Metrics settings"
+  - variable: settings.metrics.port
+    default: 9000
+    description: "The port the metrics server should bind to"
+    label: "Metrics Port"
+    type: int
+    group: "Metrics settings"

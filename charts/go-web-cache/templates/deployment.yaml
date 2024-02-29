@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "go-web-cache"
+  labels:
+    app: "go-web-cache"
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9000"
+    prometheus.io/path: "/metrics"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: "go-web-cache"
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9000"
+        prometheus.io/path: "/metrics"
+      labels:
+        app: "go-web-cache"
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: go-web-cache
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}            
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+            - containerPort: 9000
+              name: metrics
+              protocol: TCP
+            - containerPort: 9001
+              name: admin
+              protocol: TCP          
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 9001
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 9001
+          env:
+            - name: CONFIG_FILE
+              value: "{{ .Values.settings.configFile }}"
+            - name: DEBUG
+              value: "{{ .Values.settings.debug }}"
+            - name: BACKEND_SERVER
+              value: http://{{ .Values.settings.backend.host }}
+            - name: BACKEND_PORT
+              value: "{{ .Values.settings.backend.port }}"
+            - name: BACKEND_HEALTH_CHECK
+              value: "{{ .Values.settings.backend.healthCheck.path }}"
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          {{- with .Values.volumeMounts }}
+          volumeMounts:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with .Values.volumes }}
+      volumes:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
