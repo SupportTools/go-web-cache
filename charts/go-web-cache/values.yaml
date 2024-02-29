@@ -3,10 +3,6 @@
 # Declare variables to be passed into your templates.
 
 settings:
-  debug: false
-  metrics:
-    enabled: true
-    port: 9090
   backend:
     host: "web"
     port: 8080
@@ -16,7 +12,13 @@ settings:
       interval: 5s
       timeout: 3s
       retries: 3
+  cache:
+    size: 0 # 0 means no limit
   configFile: "/app/config.json"
+  debug: false
+  metrics:
+    enabled: true
+    port: 9090
 
 replicaCount: 1
 

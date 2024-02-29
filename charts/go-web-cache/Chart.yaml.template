@@ -2,7 +2,7 @@ apiVersion: v1
 name: go-web-cache
 version: ${CHART_VERSION}
 appVersion: ${APP_VERSION}
-description: go-web-cache is a tool for backing up the configuration files in a Kubernetes cluster and uploading them to a S3 bucket.
+description: GO-Web-Cache is a simple caching server written in Go that acts as a reverse proxy to cache responses from a backend server. It includes features such as caching based on Cache-Control directives, health checks, metrics, and an admin API to manage cached items.
 keywords:
 - kubernetes
 - backup
