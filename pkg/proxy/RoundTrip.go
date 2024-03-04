@@ -2,7 +2,6 @@ package proxy
 
 import (
 	"bytes"
-	"context"
 	"io"
 	"net/http"
 	"time"
@@ -30,12 +29,11 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 		return t.RoundTripper.RoundTrip(req)
 	}
 
-	// Apply timeout through context
-	timeout := time.Duration(config.CFG.BackendTimeoutMs) * time.Millisecond
-	ctx, cancel := context.WithTimeout(req.Context(), timeout)
-	defer cancel() // Ensure the context is cancelled to prevent a context leak
-
-	modifiedReq = modifiedReq.WithContext(ctx)
+	// // Apply timeout through context
+	// timeout := time.Duration(config.CFG.BackendTimeoutMs) * time.Millisecond
+	// ctx, cancel := context.WithTimeout(req.Context(), timeout)
+	// defer cancel() // Ensure the context is cancelled to prevent a context leak
+	// modifiedReq = modifiedReq.WithContext(ctx)
 
 	startTime := time.Now()
 	cacheKey := cache.GetCacheKey(req)
