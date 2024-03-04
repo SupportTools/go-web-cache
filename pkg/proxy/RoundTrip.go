@@ -17,10 +17,10 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	log.Printf("RoundTrip called for URL: %s", req.URL.String())
 	metrics.IncrementTotalRequests()
 
-	if req.Method != "GET" {
-		log.Println("Non-GET request, bypassing cache and forwarding directly")
-		return t.RoundTripper.RoundTrip(req)
-	}
+	// if req.Method != "GET" {
+	// 	log.Println("Non-GET request, bypassing cache and forwarding directly")
+	// 	return t.RoundTripper.RoundTrip(req)
+	// }
 
 	//modifiedReq := cloneRequestForClient(req)
 	//log.Printf("Modified request for caching: URL Scheme: %s, Host: %s", modifiedReq.URL.Scheme, modifiedReq.Host)
@@ -78,8 +78,17 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 }
 
 func cacheResponse(t *Transport, cacheKey string, resp *http.Response, body []byte, req *http.Request) bool {
-	cacheControl := cache.ParseCacheControl(resp.Header.Get("Cache-Control"))
+	// Log for debugging
+	log.Printf("Attempting to cache response for path: %s, Cache Key: %s", req.URL.Path, cacheKey)
+
+	// Check and log the cache-control header
+	cacheControlHeader := resp.Header.Get("Cache-Control")
+	log.Printf("Cache-Control for %s: %s", req.URL.Path, cacheControlHeader)
+
+	cacheControl := cache.ParseCacheControl(cacheControlHeader)
 	if shouldCache := t.CacheManager.ShouldCache(resp, cacheControl); shouldCache {
+		// Additional logging to confirm caching decision
+		log.Printf("Caching enabled for: %s", req.URL.Path)
 		item := cache.CacheItem{
 			ContentType:     resp.Header.Get("Content-Type"),
 			Content:         body,
@@ -90,6 +99,9 @@ func cacheResponse(t *Transport, cacheKey string, resp *http.Response, body []by
 		t.CacheManager.SetItemExpiration(&item, cacheControl)
 		t.CacheManager.WriteWithDefaultExpiration(cacheKey, item)
 		return true
+	} else {
+		// Log why caching was not performed
+		log.Printf("Response for %s not cached, Cache-Control: %s", req.URL.Path, cacheControlHeader)
 	}
 	return false
 }
