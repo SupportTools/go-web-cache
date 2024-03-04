@@ -33,6 +33,12 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	startTime := time.Now()
 	cacheKey := cache.GetCacheKey(req)
 	log.Printf("Cache key generated: %s", cacheKey)
+	_, found := t.CacheManager.Read(cacheKey)
+	if found {
+		log.Printf("Cache hit for %s, Cache Key: %s", req.URL.Path, cacheKey)
+	} else {
+		log.Printf("Cache miss for %s, Cache Key: %s. Forwarding request to backend.", req.URL.Path, cacheKey)
+	}
 	if item, found := t.CacheManager.Read(cacheKey); found && item.Expiration.After(time.Now()) {
 		log.Println("Cache hit")
 		metrics.IncrementCacheHits()
@@ -75,35 +81,6 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	metrics.ObserveTotalResponseTime(duration)
 
 	return resp, nil
-}
-
-func cacheResponse(t *Transport, cacheKey string, resp *http.Response, body []byte, req *http.Request) bool {
-	// Log for debugging
-	log.Printf("Attempting to cache response for path: %s, Cache Key: %s", req.URL.Path, cacheKey)
-
-	// Check and log the cache-control header
-	cacheControlHeader := resp.Header.Get("Cache-Control")
-	log.Printf("Cache-Control for %s: %s", req.URL.Path, cacheControlHeader)
-
-	cacheControl := cache.ParseCacheControl(cacheControlHeader)
-	if shouldCache := t.CacheManager.ShouldCache(resp, cacheControl); shouldCache {
-		// Additional logging to confirm caching decision
-		log.Printf("Caching enabled for: %s", req.URL.Path)
-		item := cache.CacheItem{
-			ContentType:     resp.Header.Get("Content-Type"),
-			Content:         body,
-			CacheControl:    cache.ReconstructCacheControl(cacheControl),
-			ContentEncoding: resp.Header.Get("Content-Encoding"),
-			Path:            req.URL.Path,
-		}
-		t.CacheManager.SetItemExpiration(&item, cacheControl)
-		t.CacheManager.WriteWithDefaultExpiration(cacheKey, item)
-		return true
-	} else {
-		// Log why caching was not performed
-		log.Printf("Response for %s not cached, Cache-Control: %s", req.URL.Path, cacheControlHeader)
-	}
-	return false
 }
 
 // func cloneRequestForClient(req *http.Request) *http.Request {
