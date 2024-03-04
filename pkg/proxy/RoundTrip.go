@@ -22,8 +22,8 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 		return t.RoundTripper.RoundTrip(req)
 	}
 
-	modifiedReq := cloneRequestForClient(req)
-	log.Printf("Modified request for caching: URL Scheme: %s, Host: %s", modifiedReq.URL.Scheme, modifiedReq.Host)
+	//modifiedReq := cloneRequestForClient(req)
+	//log.Printf("Modified request for caching: URL Scheme: %s, Host: %s", modifiedReq.URL.Scheme, modifiedReq.Host)
 
 	if security.HasWordPressLoginCookie(req) {
 		log.Println("Request has WordPress login cookie, bypassing cache")
@@ -94,11 +94,11 @@ func cacheResponse(t *Transport, cacheKey string, resp *http.Response, body []by
 	return false
 }
 
-func cloneRequestForClient(req *http.Request) *http.Request {
-	urlCopy := *req.URL
-	clonedReq := req.WithContext(req.Context())
-	clonedReq.URL = &urlCopy
-	clonedReq.Host = req.Host
-	log.Printf("Request cloned for modification: %s", clonedReq.URL.String())
-	return clonedReq
-}
+// func cloneRequestForClient(req *http.Request) *http.Request {
+// 	urlCopy := *req.URL
+// 	clonedReq := req.WithContext(req.Context())
+// 	clonedReq.URL = &urlCopy
+// 	clonedReq.Host = req.Host
+// 	log.Printf("Request cloned for modification: %s", clonedReq.URL.String())
+// 	return clonedReq
+// }
