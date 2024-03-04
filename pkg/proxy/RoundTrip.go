@@ -3,41 +3,38 @@ package proxy
 import (
 	"bytes"
 	"io"
+	"log"
 	"net/http"
 	"time"
 
 	"github.com/supporttools/go-web-cache/pkg/cache"
-	"github.com/supporttools/go-web-cache/pkg/config"
 	"github.com/supporttools/go-web-cache/pkg/metrics"
 	"github.com/supporttools/go-web-cache/pkg/security"
 )
 
 // RoundTrip executes a single HTTP transaction, adding caching logic.
 func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
+	log.Printf("RoundTrip called for URL: %s", req.URL.String())
 	metrics.IncrementTotalRequests()
 
 	if req.Method != "GET" {
+		log.Println("Non-GET request, bypassing cache and forwarding directly")
 		return t.RoundTripper.RoundTrip(req)
 	}
 
 	modifiedReq := cloneRequestForClient(req)
-	modifiedReq.URL.Scheme = config.CFG.BackendScheme
-	modifiedReq.URL.Host = config.CFG.BackendServer
-	modifiedReq.Host = config.CFG.BackendServer
+	log.Printf("Modified request for caching: URL Scheme: %s, Host: %s", modifiedReq.URL.Scheme, modifiedReq.Host)
 
 	if security.HasWordPressLoginCookie(req) {
+		log.Println("Request has WordPress login cookie, bypassing cache")
 		return t.RoundTripper.RoundTrip(req)
 	}
 
-	// // Apply timeout through context
-	// timeout := time.Duration(config.CFG.BackendTimeoutMs) * time.Millisecond
-	// ctx, cancel := context.WithTimeout(req.Context(), timeout)
-	// defer cancel() // Ensure the context is cancelled to prevent a context leak
-	// modifiedReq = modifiedReq.WithContext(ctx)
-
 	startTime := time.Now()
 	cacheKey := cache.GetCacheKey(req)
+	log.Printf("Cache key generated: %s", cacheKey)
 	if item, found := t.CacheManager.Read(cacheKey); found && item.Expiration.After(time.Now()) {
+		log.Println("Cache hit")
 		metrics.IncrementCacheHits()
 		cacheHitStartTime := time.Now()
 		cacheHitDuration := time.Since(cacheHitStartTime).Seconds()
@@ -47,22 +44,28 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 		return prepareCachedResponse(&item), nil
 	}
 
+	log.Println("Cache miss, forwarding request to backend")
 	resp, err := t.RoundTripper.RoundTrip(req)
 	if err != nil {
+		log.Printf("Error forwarding request to backend: %v", err)
 		return nil, err
 	}
 
 	body, readErr := io.ReadAll(resp.Body)
 	resp.Body.Close()
 	if readErr != nil {
+		log.Printf("Error reading response body: %v", readErr)
 		return nil, readErr
 	}
 	resp.Body = io.NopCloser(bytes.NewBuffer(body))
 	metrics.IncrementCacheMisses()
-	cacheMissStartTime := time.Now()
 
+	cacheMissStartTime := time.Now()
 	go func() {
 		if shouldCache := cacheResponse(t, cacheKey, resp, body, req); shouldCache {
+			log.Printf("Response for %s cached successfully", req.URL.Path)
+		} else {
+			log.Printf("Response for %s not cached", req.URL.Path)
 		}
 	}()
 
@@ -92,16 +95,10 @@ func cacheResponse(t *Transport, cacheKey string, resp *http.Response, body []by
 }
 
 func cloneRequestForClient(req *http.Request) *http.Request {
-	// Deep copy the URL to ensure modifications don't affect the original request
 	urlCopy := *req.URL
-	clonedReq := req.WithContext(req.Context()) // Creates a shallow copy of the request
-	clonedReq.URL = &urlCopy                    // Assign the deep copied URL
-
-	// Explicitly copy the Host as WithContext does not do this
+	clonedReq := req.WithContext(req.Context())
+	clonedReq.URL = &urlCopy
 	clonedReq.Host = req.Host
-
-	// No need to clear the RequestURI for client requests; it's ignored
-	// Ensure other necessary headers or attributes are copied as needed
-
+	log.Printf("Request cloned for modification: %s", clonedReq.URL.String())
 	return clonedReq
 }
