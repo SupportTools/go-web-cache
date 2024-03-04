@@ -5,7 +5,9 @@
 settings:
   backend:
     host: "web"
+    scheme: "http"
     port: 8080
+    timeout: 10000 ## Milliseconds
     healthCheck:
       enabled: true
       path: "/healthz"

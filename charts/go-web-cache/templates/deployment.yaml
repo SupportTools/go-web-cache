@@ -58,10 +58,14 @@ spec:
               value: "{{ .Values.settings.configFile }}"
             - name: DEBUG
               value: "{{ .Values.settings.debug }}"
-            - name: BACKEND_SERVER
-              value: http://{{ .Values.settings.backend.host }}
+            - name: BACKEND_HOST
+              value: "{{ .Values.settings.backend.host }}"
+            - name: BACKEND_SCHEME
+              value: "{{ .Values.settings.backend.scheme }}"
             - name: BACKEND_PORT
               value: "{{ .Values.settings.backend.port }}"
+            - name: BACKEND_TIMEOUT
+              value: "{{ .Values.settings.backend.timeout }}"
             - name: BACKEND_HEALTH_CHECK
               value: "{{ .Values.settings.backend.healthCheck.path }}"
           resources:

@@ -33,6 +33,10 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	// Modify the request to ensure it's suitable for client.Do
 	modifiedReq := cloneRequestForClient(req)
 
+	// Override the Host header to ensure the backend server knows which site to serve.
+	modifiedReq.URL.Scheme = config.CFG.BackendScheme
+	modifiedReq.URL.Host = config.CFG.BackendServer
+
 	// Skip caching for WordPress login cookies.
 	if security.HasWordPressLoginCookie(req) {
 		Logger.Println("Bypassing cache for logged-in WordPress user")

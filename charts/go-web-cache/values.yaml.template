@@ -9,6 +9,7 @@ settings:
     port: 9090
   backend:
     host: "web"
+    scheme: "http"
     port: 8080
     healthCheck:
       enabled: true

@@ -5,10 +5,22 @@ questions:
     label: "Backend Host"
     type: string
     group: "Backend settings"
+  - variable: settings.backend.scheme
+    default: "http"
+    description: "The scheme of the backend service (e.g. http or https)"
+    label: "Backend Scheme"
+    type: string
+    group: "Backend settings"
   - variable: settings.backend.port
     default: 8080
     description: "The port of the backend service (e.g. 8080)"
     label: "Backend Port"
+    type: int
+    group: "Backend settings"
+  - variable: settings.backend.timeout
+    default: 10000
+    description: "The timeout to use for the backend service (e.g. 10000) NOTE: This is in milliseconds"
+    label: "Backend Timeout"
     type: int
     group: "Backend settings"
   - variable: settings.backend.healthCheck.enabled

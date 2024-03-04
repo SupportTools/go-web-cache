@@ -14,6 +14,8 @@ type AppConfig struct {
 	Debug                bool            `json:"debug"`
 	MetricsPort          int             `json:"metricsPort"`
 	AdminPort            int             `json:"adminPort"`
+	BackendHost          string          `json:"backendHost"`
+	BackendScheme        string          `json:"backendScheme"`
 	BackendServer        string          `json:"backendServer"`
 	BackendPort          int             `json:"backendPort"`
 	BackendHealthCheck   string          `json:"backendHealthCheck"`
@@ -52,7 +54,8 @@ func overrideConfigWithEnv() {
 	CFG.Debug = parseEnvBool("DEBUG", CFG.Debug)
 	CFG.MetricsPort = parseEnvInt("METRICS_PORT", CFG.MetricsPort)
 	CFG.AdminPort = parseEnvInt("ADMIN_PORT", CFG.AdminPort)
-	CFG.BackendServer = getEnvOrDefault("BACKEND_SERVER", CFG.BackendServer)
+	CFG.BackendHost = getEnvOrDefault("BACKEND_HOST", CFG.BackendHost)
+	CFG.BackendScheme = getEnvOrDefault("BACKEND_SCHEME", CFG.BackendScheme)
 	CFG.BackendPort = parseEnvInt("BACKEND_PORT", CFG.BackendPort)
 	CFG.BackendHealthCheck = getEnvOrDefault("BACKEND_HEALTH_CHECK", CFG.BackendHealthCheck)
 	CFG.BackendTimeoutMs = parseEnvInt("BACKEND_TIMEOUT", CFG.BackendTimeoutMs)
