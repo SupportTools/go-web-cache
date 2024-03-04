@@ -2,7 +2,7 @@ package proxy
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"time"
 
@@ -17,10 +17,24 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	// Increment the total number of requests.
 	metrics.IncrementTotalRequests()
 
+	// Skip caching for non-GET requests.
+	if req.Method != "GET" {
+		Logger.Println("Bypassing cache for non-GET request")
+		return t.RoundTripper.RoundTrip(req)
+	}
+
+	// Setting Timeout for the request
+	timeout := time.Duration(config.CFG.BackendTimeoutMs) * time.Millisecond
+	client := &http.Client{
+		Timeout:   timeout,
+		Transport: t.RoundTripper,
+	}
+
 	// Skip caching for WordPress login cookies.
 	if security.HasWordPressLoginCookie(req) {
 		Logger.Println("Bypassing cache for logged-in WordPress user")
-		return t.RoundTripper.RoundTrip(req)
+		//return t.RoundTripper.RoundTrip(req)
+		return client.Do(req)
 	}
 
 	// Start timer to track overall response time
@@ -40,9 +54,6 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 			Logger.Printf("Debug: Serving %s from cache", req.URL.Path)
 		}
 
-		// Prepare the cached response
-		cachedResponse := prepareCachedResponse(&item)
-
 		// Calculate cache hit response time duration
 		cacheHitDuration := time.Since(cacheHitStartTime).Seconds()
 		metrics.ObserveCacheHitResponseTime(cacheHitDuration)
@@ -51,27 +62,27 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 		duration := time.Since(startTime).Seconds()
 		metrics.ObserveTotalResponseTime(duration)
 
-		return cachedResponse, nil
+		return prepareCachedResponse(&item), nil
 	}
 
 	// Cache miss or expired item, perform the request.
-	resp, err := t.RoundTripper.RoundTrip(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	Logger.Debugf("Received response for %s with status code %d", req.URL.Path, resp.StatusCode)
 
 	// Clone the response body for both caching and responding to the client.
-	body, readErr := ioutil.ReadAll(resp.Body)
+	body, readErr := io.ReadAll(resp.Body)
 	resp.Body.Close() // Close the original body.
 	if readErr != nil {
 		return nil, readErr
 	}
-	resp.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+	resp.Body = io.NopCloser(bytes.NewBuffer(body))
 
 	// Increment cache misses counter
 	metrics.IncrementCacheMisses()
-	
+
 	// Calculate cache miss response time
 	cacheMissStartTime := time.Now()
 
