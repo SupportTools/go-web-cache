@@ -51,7 +51,7 @@ func main() {
 	go admin.StartAdminServer(cacheManager, config.CFG.AdminPort)
 
 	// Setup reverse proxy and start the main server
-	backendURL := fmt.Sprintf("%s/%s:%d", config.CFG.BackendScheme, config.CFG.BackendHost, config.CFG.BackendPort)
+	backendURL := fmt.Sprintf("%s://%s:%d", config.CFG.BackendScheme, config.CFG.BackendHost, config.CFG.BackendPort)
 	proxyServer := proxy.NewReverseProxy(backendURL, cacheManager)
 	http.HandleFunc("/", logging.LogRequests(proxyServer.ServeHTTP))
 

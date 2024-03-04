@@ -143,5 +143,8 @@ func cloneRequestForClient(req *http.Request) *http.Request {
 	// Clear the RequestURI field to avoid the "Request.RequestURI can't be set in client requests" error
 	clonedReq.RequestURI = ""
 
+	// Ensure the Host header is set to the backend host, not the proxy host.
+	clonedReq.Host = config.CFG.BackendHost
+
 	return clonedReq
 }
