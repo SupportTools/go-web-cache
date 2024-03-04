@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"net/http"
 	"time"
@@ -14,109 +15,67 @@ import (
 
 // RoundTrip executes a single HTTP transaction, adding caching logic.
 func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
-	// Increment the total number of requests.
 	metrics.IncrementTotalRequests()
 
-	// Skip caching for non-GET requests.
 	if req.Method != "GET" {
-		Logger.Println("Bypassing cache for non-GET request")
 		return t.RoundTripper.RoundTrip(req)
 	}
 
-	// Setting Timeout for the request
-	timeout := time.Duration(config.CFG.BackendTimeoutMs) * time.Millisecond
-	client := &http.Client{
-		Timeout:   timeout,
-		Transport: t.RoundTripper,
-	}
-
-	// Modify the request to ensure it's suitable for client.Do
 	modifiedReq := cloneRequestForClient(req)
-
-	// Override the Host header to ensure the backend server knows which site to serve.
 	modifiedReq.URL.Scheme = config.CFG.BackendScheme
 	modifiedReq.URL.Host = config.CFG.BackendServer
+	modifiedReq.Host = config.CFG.BackendServer
 
-	// Skip caching for WordPress login cookies.
 	if security.HasWordPressLoginCookie(req) {
-		Logger.Println("Bypassing cache for logged-in WordPress user")
-		//return t.RoundTripper.RoundTrip(req)
-		return client.Do(req)
+		return t.RoundTripper.RoundTrip(req)
 	}
 
-	// Start timer to track overall response time
-	startTime := time.Now()
+	// Apply timeout through context
+	timeout := time.Duration(config.CFG.BackendTimeoutMs) * time.Millisecond
+	ctx, cancel := context.WithTimeout(req.Context(), timeout)
+	defer cancel() // Ensure the context is cancelled to prevent a context leak
 
-	// Attempt to serve the request from cache.
+	modifiedReq = modifiedReq.WithContext(ctx)
+
+	startTime := time.Now()
 	cacheKey := cache.GetCacheKey(req)
 	if item, found := t.CacheManager.Read(cacheKey); found && item.Expiration.After(time.Now()) {
-		// Cache hit
 		metrics.IncrementCacheHits()
-
-		// Calculate cache hit response time
 		cacheHitStartTime := time.Now()
-
-		Logger.Printf("Cache hit for: %s", cacheKey)
-		if config.CFG.Debug {
-			Logger.Printf("Debug: Serving %s from cache", req.URL.Path)
-		}
-
-		// Calculate cache hit response time duration
 		cacheHitDuration := time.Since(cacheHitStartTime).Seconds()
 		metrics.ObserveCacheHitResponseTime(cacheHitDuration)
-
-		// Calculate overall response time duration
 		duration := time.Since(startTime).Seconds()
 		metrics.ObserveTotalResponseTime(duration)
-
 		return prepareCachedResponse(&item), nil
 	}
 
-	// Cache miss or expired item, perform the request.
-	resp, err := client.Do(modifiedReq)
+	resp, err := t.RoundTripper.RoundTrip(req)
 	if err != nil {
 		return nil, err
 	}
-	Logger.Debugf("Received response for %s with status code %d", req.URL.Path, resp.StatusCode)
 
-	// Clone the response body for both caching and responding to the client.
 	body, readErr := io.ReadAll(resp.Body)
-	resp.Body.Close() // Close the original body.
+	resp.Body.Close()
 	if readErr != nil {
 		return nil, readErr
 	}
 	resp.Body = io.NopCloser(bytes.NewBuffer(body))
-
-	// Increment cache misses counter
 	metrics.IncrementCacheMisses()
-
-	// Calculate cache miss response time
 	cacheMissStartTime := time.Now()
 
-	// Response received, send it to the client.
-	go func(t *Transport, cacheKey string, resp *http.Response, body []byte, req *http.Request) {
-		defer func() {
-			if r := recover(); r != nil {
-				Logger.Printf("Recovering from panic during cache write: %v", r)
-			}
-		}()
+	go func() {
 		if shouldCache := cacheResponse(t, cacheKey, resp, body, req); shouldCache {
-			Logger.Debugf("Caching response for %s", cacheKey)
 		}
-	}(t, cacheKey, resp, body, req)
+	}()
 
-	// Calculate cache miss response time duration
 	cacheMissDuration := time.Since(cacheMissStartTime).Seconds()
 	metrics.ObserveCacheMissResponseTime(cacheMissDuration)
-
-	// Calculate overall response time duration
 	duration := time.Since(startTime).Seconds()
 	metrics.ObserveTotalResponseTime(duration)
 
 	return resp, nil
 }
 
-// cacheResponse caches the response if necessary.
 func cacheResponse(t *Transport, cacheKey string, resp *http.Response, body []byte, req *http.Request) bool {
 	cacheControl := cache.ParseCacheControl(resp.Header.Get("Cache-Control"))
 	if shouldCache := t.CacheManager.ShouldCache(resp, cacheControl); shouldCache {
@@ -131,17 +90,20 @@ func cacheResponse(t *Transport, cacheKey string, resp *http.Response, body []by
 		t.CacheManager.WriteWithDefaultExpiration(cacheKey, item)
 		return true
 	}
-	Logger.Debugf("Not caching response for: %s", cacheKey)
 	return false
 }
 
-// cloneRequestForClient creates a new request object suitable for use with http.Client
 func cloneRequestForClient(req *http.Request) *http.Request {
-	// Clone the request to avoid modifying the original request
-	clonedReq := req.Clone(req.Context())
+	// Deep copy the URL to ensure modifications don't affect the original request
+	urlCopy := *req.URL
+	clonedReq := req.WithContext(req.Context()) // Creates a shallow copy of the request
+	clonedReq.URL = &urlCopy                    // Assign the deep copied URL
 
-	// Clear the RequestURI field to avoid the "Request.RequestURI can't be set in client requests" error
-	clonedReq.RequestURI = ""
+	// Explicitly copy the Host as WithContext does not do this
+	clonedReq.Host = req.Host
+
+	// No need to clear the RequestURI for client requests; it's ignored
+	// Ensure other necessary headers or attributes are copied as needed
 
 	return clonedReq
 }

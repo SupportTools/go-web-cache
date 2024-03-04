@@ -2,7 +2,7 @@ package proxy
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"github.com/supporttools/go-web-cache/pkg/cache"
@@ -20,7 +20,7 @@ func prepareCachedResponse(item *cache.CacheItem) *http.Response {
 
 	return &http.Response{
 		StatusCode: http.StatusOK,
-		Body:       ioutil.NopCloser(bytes.NewBuffer(item.Content)),
+		Body:       io.NopCloser(bytes.NewBuffer(item.Content)),
 		Header:     headers,
 	}
 }

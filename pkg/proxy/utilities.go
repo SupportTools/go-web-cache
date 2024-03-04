@@ -11,6 +11,6 @@ var Logger = logging.SetupLogging()
 
 // Transport extends the http.RoundTripper interface with caching logic.
 type Transport struct {
-	http.RoundTripper
+	RoundTripper http.RoundTripper
 	CacheManager cache.CacheManager
 }
