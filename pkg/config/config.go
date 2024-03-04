@@ -17,6 +17,7 @@ type AppConfig struct {
 	BackendServer        string          `json:"backendServer"`
 	BackendPort          int             `json:"backendPort"`
 	BackendHealthCheck   string          `json:"backendHealthCheck"`
+	BackendTimeoutMs     int             `json:"backendTimeoutMs"`
 	FrontendPort         int             `json:"frontendPort"`
 	CacheMaxSize         int             `json:"cacheMaxSize"`
 	CacheableMIMETypes   map[string]bool `json:"cacheableMIMETypes"`
@@ -54,6 +55,7 @@ func overrideConfigWithEnv() {
 	CFG.BackendServer = getEnvOrDefault("BACKEND_SERVER", CFG.BackendServer)
 	CFG.BackendPort = parseEnvInt("BACKEND_PORT", CFG.BackendPort)
 	CFG.BackendHealthCheck = getEnvOrDefault("BACKEND_HEALTH_CHECK", CFG.BackendHealthCheck)
+	CFG.BackendTimeoutMs = parseEnvInt("BACKEND_TIMEOUT", CFG.BackendTimeoutMs)
 	CFG.FrontendPort = parseEnvInt("FRONTEND_PORT", CFG.FrontendPort)
 	CFG.CacheMaxSize = parseEnvInt("CACHE_MAX_SIZE", CFG.CacheMaxSize)
 }
