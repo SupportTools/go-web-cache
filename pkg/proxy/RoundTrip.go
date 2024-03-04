@@ -30,6 +30,9 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 		Transport: t.RoundTripper,
 	}
 
+	// Modify the request to ensure it's suitable for client.Do
+	modifiedReq := cloneRequestForClient(req)
+
 	// Skip caching for WordPress login cookies.
 	if security.HasWordPressLoginCookie(req) {
 		Logger.Println("Bypassing cache for logged-in WordPress user")
@@ -66,7 +69,7 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	}
 
 	// Cache miss or expired item, perform the request.
-	resp, err := client.Do(req)
+	resp, err := client.Do(modifiedReq)
 	if err != nil {
 		return nil, err
 	}
@@ -126,4 +129,15 @@ func cacheResponse(t *Transport, cacheKey string, resp *http.Response, body []by
 	}
 	Logger.Debugf("Not caching response for: %s", cacheKey)
 	return false
+}
+
+// cloneRequestForClient creates a new request object suitable for use with http.Client
+func cloneRequestForClient(req *http.Request) *http.Request {
+	// Clone the request to avoid modifying the original request
+	clonedReq := req.Clone(req.Context())
+
+	// Clear the RequestURI field to avoid the "Request.RequestURI can't be set in client requests" error
+	clonedReq.RequestURI = ""
+
+	return clonedReq
 }
