@@ -26,7 +26,8 @@ func main() {
 		logger.Printf("Debug: %t", config.CFG.Debug)
 		logger.Printf("MetricsPort: %d", config.CFG.MetricsPort)
 		logger.Printf("AdminPort: %d", config.CFG.AdminPort)
-		logger.Printf("BackendServer: %s", config.CFG.BackendServer)
+		logger.Printf("BackendHost: %s", config.CFG.BackendHost)
+		logger.Printf("BackendScheme: %s", config.CFG.BackendScheme)
 		logger.Printf("BackendPort: %d", config.CFG.BackendPort)
 		logger.Printf("FrontendPort: %d", config.CFG.FrontendPort)
 		logger.Printf("CacheMaxSize: %d", config.CFG.CacheMaxSize)
@@ -50,7 +51,7 @@ func main() {
 	go admin.StartAdminServer(cacheManager, config.CFG.AdminPort)
 
 	// Setup reverse proxy and start the main server
-	backendURL := fmt.Sprintf("%s:%d", config.CFG.BackendServer, config.CFG.BackendPort)
+	backendURL := fmt.Sprintf("%s/%s:%d", config.CFG.BackendScheme, config.CFG.BackendHost, config.CFG.BackendPort)
 	proxyServer := proxy.NewReverseProxy(backendURL, cacheManager)
 	http.HandleFunc("/", logging.LogRequests(proxyServer.ServeHTTP))
 
