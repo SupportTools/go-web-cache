@@ -44,12 +44,13 @@ func SetupLogging() *logrus.Logger {
 	// Output to stderr instead of stdout, could also be a file.
 	log.SetOutput(os.Stderr)
 
-	// Set the default log level to Info
-	if config.CFG.Debug {
-		log.SetLevel(logrus.DebugLevel)
-	} else {
-		log.SetLevel(logrus.InfoLevel)
-	}
+	log.SetLevel(logrus.DebugLevel)
+	// // Set the default log level to Info
+	// if config.CFG.Debug {
+	// 	log.SetLevel(logrus.DebugLevel)
+	// } else {
+	// 	log.SetLevel(logrus.InfoLevel)
+	// }
 
 	return log
 }

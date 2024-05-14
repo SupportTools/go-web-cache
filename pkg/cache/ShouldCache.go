@@ -2,6 +2,7 @@ package cache
 
 import (
 	"net/http"
+	"strconv"
 )
 
 // ShouldCache decides whether the response should be cached based on Cache-Control directives
@@ -32,8 +33,23 @@ func (c *InMemoryCache) ShouldCache(resp *http.Response, cacheControl map[string
 		return false
 	}
 
+	// Cache if max-age directive is present and has a positive value.
+	if maxAge, exists := cacheControl["max-age"]; exists {
+		maxAgeValue, err := strconv.Atoi(maxAge)
+		if err == nil && maxAgeValue > 0 {
+			Logger.Debugf("ShouldCache: 'max-age=%d' directive found. Caching content type '%s'.", maxAgeValue, contentType)
+			return true
+		}
+	}
+
+	// Cache if the public directive is present.
+	if _, public := cacheControl["public"]; public {
+		Logger.Debugf("ShouldCache: 'public' directive found. Caching content type '%s'.", contentType)
+		return true
+	}
+
 	// Cache if the response is successful (HTTP 200) and the content type is explicitly cacheable.
-	cachable := resp.StatusCode == 200 && isContentTypeCacheable
-	Logger.Debugf("ShouldCache: Final decision for content type '%s': %t", contentType, cachable)
-	return cachable
+	cacheable := resp.StatusCode == 200 && isContentTypeCacheable
+	Logger.Debugf("ShouldCache: Final decision for content type '%s': %t", contentType, cacheable)
+	return cacheable
 }

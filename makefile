@@ -22,7 +22,7 @@ help:
 .DEFAULT_GOAL := all
 
 build:
-	    @docker build --platform linux/amd64 --pull --build-arg GIT_COMMIT=`git rev-parse HEAD` --build-arg VERSION=${TAG} --build-arg BUILD_DATE=`date -u +"%Y-%m-%dT%H:%M:%SZ"` -t ${IMAGEFULLNAME} .
+		@docker buildx build --platform linux/amd64 --pull --build-arg VERSION=${TAG} --build-arg GIT_COMMIT=`git rev-parse HEAD` --build-arg BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ") --cache-from supporttools/go-web-cache:latest -t supporttools/go-web-cache:${TAG} -t supporttools/go-web-cache:latest --push -f Dockerfile .
 
 push:
 	    @docker push ${IMAGEFULLNAME}
@@ -31,6 +31,5 @@ push:
 
 bump:
 		@make build push
-		@kubectl -n supporttools-mst set image deployment/web-cache go-web-cache=${IMAGEFULLNAME}
 
 all: build push

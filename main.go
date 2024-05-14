@@ -52,8 +52,6 @@ func main() {
 
 	// Setup reverse proxy and start the main server
 	backendURL := fmt.Sprintf("%s://%s:%d", config.CFG.BackendScheme, config.CFG.BackendHost, config.CFG.BackendPort)
-	fmt.Printf("backendURL: %s\n", backendURL)
-	
 	proxyServer := proxy.NewReverseProxy(backendURL, cacheManager)
 	http.HandleFunc("/", logging.LogRequests(proxyServer.ServeHTTP))
 

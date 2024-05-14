@@ -14,7 +14,6 @@ import (
 
 // RoundTrip executes a single HTTP transaction, adding caching logic.
 func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
-	log.Printf("RoundTrip called for URL: %s", req.URL.String())
 	metrics.IncrementTotalRequests()
 
 	// if req.Method != "GET" {
