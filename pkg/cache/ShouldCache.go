@@ -3,6 +3,7 @@ package cache
 import (
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 // ShouldCache decides whether the response should be cached based on Cache-Control directives
@@ -10,10 +11,13 @@ import (
 func (c *InMemoryCache) ShouldCache(resp *http.Response, cacheControl map[string]string) bool {
 	contentType := resp.Header.Get("Content-Type")
 
-	// Check if the content type is cacheable using this instance's configuration.
-	isContentTypeCacheable := c.IsCacheableContentType(contentType)
+	// Extract the base content type without parameters (e.g., charset).
+	baseContentType := strings.Split(contentType, ";")[0]
 
-	Logger.Debugf("ShouldCache: Checking if content type '%s' is cacheable.", contentType)
+	// Check if the content type is cacheable using this instance's configuration.
+	isContentTypeCacheable := c.IsCacheableContentType(baseContentType)
+
+	Logger.Debugf("ShouldCache: Checking if content type '%s' (base: '%s') is cacheable.", contentType, baseContentType)
 	Logger.Debugf("ShouldCache: Cacheable content types: %v", c.cacheConfig.CacheableMIMETypes)
 
 	// Default to caching if the content type is cacheable and there's no "no-store" directive,
