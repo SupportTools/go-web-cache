@@ -9,7 +9,7 @@ metadata:
     prometheus.io/port: "9000"
     prometheus.io/path: "/metrics"
 spec:
-  replicas: 1
+  replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
       app: "go-web-cache"
